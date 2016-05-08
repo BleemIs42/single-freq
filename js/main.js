@@ -1,6 +1,7 @@
 $(function(){
 	var W = 100;
 	var H = 80;
+	var PI = Math.PI;
 
 	var video = $('#video')[0];
 
@@ -77,10 +78,11 @@ $(function(){
 
     	for(var i = 0; i < h; i++){
 	    	for(var j = 0; j < w * 4; j += 4 ){
+	    		var n = i * w * 4 + j;
 	    		for(var k = 0; k < 3; k++){
-	    			img.data[i*w*4+j+k] = 127.5 + 127.5 * Math.cos( j / f * 2 * Math.PI + Math.PI * phase / 2);
+	    			img.data[n+k] = 127.5 + 127.5 * Math.cos( (j / f * 2 +  phase / 2) * PI);
 	    		}
-	    		img.data[i*w*4+j+3] = 255;
+	    		img.data[n+3] = 255;
 	    	}
     	}
 
@@ -103,7 +105,7 @@ $(function(){
     	img.onload = function(){
     		$('.photos').append(img);    		  		
     	}
-    	img.src = camera.toDataURL("image/png");
+    	img.src = canvas.toDataURL("image/png");
     	tempImgList.push( getImgPiexlData(img) );
 
     	var val = parseInt( $('#select').val() );
@@ -122,7 +124,6 @@ $(function(){
     	}
     }
 
-
     function getImgPiexlData(img){
     	var tempCanvas = $('<canvas/>')[0];
     	var tempCtx = tempCanvas.getContext('2d');
@@ -132,6 +133,120 @@ $(function(){
     	return tempCtx.getImageData(0, 0, W, H).data;
     }
 
+    $('.untiephase').on('click', function(){
+    	untiePhase();
+    })
+
+    // 解相位
+    function untiePhase(){
+    	var I1, I2;
+    	var tempImgList;
+
+    	I1 = imgSubtract( frontImgList[3],  frontImgList[1] );
+    	I2 = imgSubtract( frontImgList[0],  frontImgList[2] );
+    	tempImgList = getPhase( I1, I2);
+
+    	// frontImgList = getPhase( 
+    	// 	imgSubtract( frontImgList[3],  frontImgList[1] ), 
+    	// 	imgSubtract( frontImgList[0],  frontImgList[2] ) 
+    	// );
+
+    	// backImgList = getPhase( 
+    	// 	imgSubtract( backImgList[3],  backImgList[1] ),  
+    	// 	imgSubtract( backImgList[0],  backImgList[2] ) 
+    	// );
+
+    	// objImgList = getPhase( 
+    	// 	imgSubtract( objImgList[3],  objImgList[1] ),  
+    	// 	imgSubtract( objImgList[0],  objImgList[2] ) 
+    	// );
+
+    	showImgData(ctxView, tempImgList);
+    }
+
+    // 图片相减
+    function imgSubtract(I1, I2){
+    	if(!I1.length && !I2.length) return;
+
+    	var I = [];
+    	for(var i = 0; i < H; i++){
+	    	for(var j = 0; j < W * 4; j += 4 ){
+	    		var n = i * W * 4 + j;
+	    		for(var k = 0; k < 3; k++){
+	    			I[n+k] = I1[n+k] - I2[n+k];
+	    		}
+	    		I[n+3] = 255;
+	    	}
+    	}
+    	return I;
+    }
+
+    // Φ = arctan( I1=(I4 - I2) / I2=(I1 - I3) )
+    function getPhase(I1, I2){
+    	if(!I1.length && !I2.length) return;
+
+    	var I = [];
+    	for(var i = 0; i < H; i++){
+	    	for(var j = 0; j < W * 4; j += 4 ){
+	    		var n = i * W * 4 + j;
+	    		for(var k = 0; k < 3; k++){
+
+	    			// if( I1[n+k] >= 0 && I2[n+k] == 0 ){
+	    			// 	I[n+k] = PI / 2;
+	    			// }else if( I1[n+k] < 0 && I2[n+k] == 0 ){
+	    			// 	I[n+k] = PI * 3 / 2;
+	    			// }else if( I1[n+k] >= 0 && I2[n+k] > 0 ){
+	    			// 	I[n+k] = Math.atan( I1[n+k] / I2[n+k] )
+	    			// }else if( I1[n+k] >= 0 && I2[n+k] < 0 ){
+	    			// 	I[n+k] = Math.atan( I1[n+k] / I2[n+k] ) + PI;
+	    			// }else if( I1[n+k] < 0 && I2[n+k] < 0 ){
+	    			// 	I[n+k] = Math.atan( I1[n+k] / I2[n+k] ) + PI;
+	    			// }else{
+	    			// 	I[n+k] = Math.atan( I1[n+k] / I2[n+k] ) + 2 * PI;
+	    			// }
+
+	    			// 第一二象限  atan2(y, x):返回从 x 轴到点 (x,y) 的角度
+	    			if( I2[n+k] >= 0 ){
+	    				I[n+k] = Math.atan2( I2[n+k], I1[n+k] );
+	    			}else{
+	    				I[n+k] = Math.atan2( I2[n+k], I1[n+k] ) + 2 * PI;
+	    			}
+
+	    			I[n+k] = I[n+k] / 2 / PI * 255;
+	    		}
+	    		I[n+3] = 255;
+	    	}
+    	}
+
+    	return I;
+    }
+
+    function showImgData(ctx, data){
+    	if(!data.length) return;
+
+    	console.log(data)
+    	var imgData = ctx.createImageData(W, H);
+    	var len = data.length;
+    	// 直接赋值不行，并不知道原因，所以用循环
+    	for(var i = 0; i < len; i++){    		
+    		imgData.data[i] = Math.round(data[i]);
+    	}
+    	// for(var i = 0; i < len; i += 4){
+    		// imgData.data[i] = Math.floor(data[i]);
+    		// imgData.data[i+1] = ( data[i] - Math.floor(data[i]) ) * 255;
+    		// imgData.data[i+2] = 255;
+    		// imgData.data[i+3] = 255;
+    	// }
+
+    	ctx.clearRect(0, 0, W, H);
+    	ctx.putImageData(imgData, 0, 0, 0, 0, W, H);
+
+    	var img = new Image();
+    	img.onload = function(){
+    		$('.photos').append(img);    		  		
+    	}
+    	img.src = canvas.toDataURL("image/png");
+    }
 
     $('.imgs').on('change', function(e){
     	var self = $(this)[0];
