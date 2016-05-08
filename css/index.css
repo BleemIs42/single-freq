@@ -1,0 +1,70 @@
+*{
+	margin:0;
+	padding:0;
+}
+.wrapper{
+	margin:5px;
+}
+.contro{
+	float:left;
+	width:38%;
+	margin-left: 2%;
+}
+#video{
+	width:100%;
+}
+#canvas{
+	float:left;
+	width:60%;
+	background-color: #000;
+}
+#camera{
+	display:none;
+}
+.form{
+	margin-top: 2%;
+	width:100%;
+}
+.ele{
+	width:40%;
+	margin: 2%;
+	display:inline-block;
+}
+.ele input{
+	width:33%;
+}
+.btn{
+	border-radius: 10px;
+	width:20%;
+	text-align: center;
+	background-color: #079FE7;
+	padding: 2% 3%; 
+	color:#fff;
+	cursor: pointer;
+	display:inline-block;
+}
+.btn:hover{
+	background-color:#00ADFF;
+}
+.ok{
+	width:35%;
+	background-color: #1FB21F;
+	display:inline-block;
+	cursor: pointer;
+}
+.ok:hover{
+	background-color: #27D127;
+}
+.select{
+	width:25%;
+}
+.upload {
+	width:60%;
+}
+.upload .imgs{
+	width:50%;
+}
+.photos img{
+	width: 22%;
+	margin:0.5%;
+}

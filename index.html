@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zn">
+<head>
+    <meta charset="UTF-8">
+    <title>Single Frequency Grating</title>
+    <meta name="keywords" content=""/>
+    <meta name="description" content=""/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+    <meta name="format-detection" content="telephone=no, email=no"/>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="wrapper">
+        <canvas id="canvas"></canvas>
+        <canvas id="camera"></canvas>
+        <div class="contro">
+            <video id="video" autoplay ></video>
+            <div class="form">
+                <div class="ele">
+                    <lable>频率：</lable>
+                    <input class="freq" type="number" value="32">
+                </div>
+                <div class="ele">
+                    <lable>相移步数：</lable>
+                    <input  class="phase-step" type="number" value="4">
+                </div>
+                <div class="ele">
+                    <lable>宽度：</lable>
+                    <input  class="width" type="number" value="100">
+                </div>
+                <div class="ele">
+                    <lable>高度：</lable>
+                    <input  class="height" type="number" value="80">
+                </div>
+                <div class="ele btn ok step-grating">单步光栅</div>
+                <div class="ele btn ok auto-grating">自动光栅</div>
+
+                <div class="ele select">
+                    <select id="select">
+                        <option value="1" selected>标定移动前</option>
+                        <option value="2">标定移动后</option>
+                        <option value="3">标定物体</option>
+                    </select>
+                </div>
+
+                <div class="ele upload">
+                    <lable>选4幅图:</lable>
+                    <input  class="imgs" type="file"  multiple="multiple" accept="image/*">
+                </div>
+                <div class="ele btn">解相位</div>
+                <div class="ele btn">解包裹</div>
+                <div class="ele btn">三维图</div>
+            </div>
+        </div>
+        <div class="photos"></div>
+    </div>
+
+    <script src="js/jquery-2.1.1.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
