@@ -1,9 +1,14 @@
 $(function(){
-	var W = 100;
-	var H = 80;
+	var scale = 5;
+	var W = 100 * scale;
+	var H = 80 * scale;
 	var PI = Math.PI;
 
 	var video = $('#video')[0];
+	// $('video').attr({
+	// 	'width': W,
+	// 	'height': H
+	// })
 
     var canvas = $('#canvas')[0];
     var ctxView = canvas.getContext('2d');
@@ -31,11 +36,30 @@ $(function(){
         alert('getUserMedia Not Support!');
     }
 
-    drawVideo();
-    function drawVideo(){
-    	ctxCamera.drawImage(video, 0, 0, W, H);
-    	setTimeout(drawVideo, 1000 / 60);
+    // drawVideo(ctxView);
+
+    var timer;
+    function drawVideo(ctx){
+    	clearTimeout(timer);
+    	ctx.drawImage(video, 0, 0, W, H);
+    	timer = setTimeout(function(){
+    		drawVideo(ctx);
+    	}, 1000 / 60);
     }
+
+    var currentCanvas = canvas;
+    var toggle = false;
+    $('.toggle').on('click', function(){
+    	if(toggle){
+    		currentCanvas = canvas;
+    		drawVideo(ctxCamera);
+			ctxView.clearRect(0, 0, W, H);
+    	}else{
+    		currentCanvas = camera;
+    		drawVideo(ctxView);
+    	}
+    	toggle = !toggle;
+    })
 
     $('.step-grating').on('click', function(){
     	takePhoto();
@@ -58,7 +82,7 @@ $(function(){
     var step = 0;
     // 第几组图    1:标定前   2:标定后   3:物体
     var times = 1;
-    var setStep = $('.phase-step').val();
+    var setStep = 4;
 
     function takePhoto(){
     	step++;
@@ -70,9 +94,14 @@ $(function(){
 
     // 生成光栅: phase = 1, 2, 3, 4
     function creatGrating(ctx, phase, cb){
+    	if(toggle){
+    		cb();
+    		return;
+    	}
+
     	var f = parseInt( $('.freq').val() ) || 1;
-    	var w = parseInt( $('.width').val() ) || 100;
-    	var h = parseInt( $('.height').val() ) || 80;
+    	var w = scale * parseInt( $('.width').val() ) || 100;
+    	var h = scale * parseInt( $('.height').val() ) || 80;
 
     	var img = ctx.createImageData(W, H);
 
@@ -94,13 +123,14 @@ $(function(){
     	}, 300)
     }
 
-    var tempImgList = [];
     var frontImgList = [];
     var backImgList = [];
     var objImgList = [];
 
-    // 抓取视频快照, 保存图片像素数据
+    // 抓取视频或显示区域的快照, 保存图片像素数据
     function getVideoPhoto(){
+    	var tempImgList = [];
+
     	var img = new Image();
     	img.onload = function(){
     		$('.photos').append(img);    		  		
@@ -118,9 +148,6 @@ $(function(){
     			objImgList = tempImgList;
     		}
     		tempImgList = [];
-    		console.log(frontImgList);
-    		console.log(backImgList);
-    		console.log(objImgList);
     	}
     }
 
@@ -140,11 +167,10 @@ $(function(){
     // 解相位
     function untiePhase(){
     	var I1, I2;
-    	var tempImgList;
 
     	I1 = imgSubtract( frontImgList[3],  frontImgList[1] );
     	I2 = imgSubtract( frontImgList[0],  frontImgList[2] );
-    	tempImgList = getPhase( I1, I2);
+    	frontImgList = getPhase( I1, I2);
 
     	// frontImgList = getPhase( 
     	// 	imgSubtract( frontImgList[3],  frontImgList[1] ), 
@@ -191,6 +217,7 @@ $(function(){
 	    		var n = i * W * 4 + j;
 	    		for(var k = 0; k < 3; k++){
 
+	    			//貌似有点问题，好像是边界判断
 	    			// if( I1[n+k] >= 0 && I2[n+k] == 0 ){
 	    			// 	I[n+k] = PI / 2;
 	    			// }else if( I1[n+k] < 0 && I2[n+k] == 0 ){
@@ -224,28 +251,60 @@ $(function(){
     function showImgData(ctx, data){
     	if(!data.length) return;
 
-    	console.log(data)
     	var imgData = ctx.createImageData(W, H);
+    	// 直接赋值不行，并不知道原因，所以用循环,
+    	// canvas像素自动向上取整了
     	var len = data.length;
-    	// 直接赋值不行，并不知道原因，所以用循环
-    	for(var i = 0; i < len; i++){    		
-    		imgData.data[i] = Math.round(data[i]);
+    	var max = 0;
+    	for(var l = 0; l < len; l++){
+    		if(data[l] > max){
+    			max = data[l];
+    		}
     	}
-    	// for(var i = 0; i < len; i += 4){
-    		// imgData.data[i] = Math.floor(data[i]);
-    		// imgData.data[i+1] = ( data[i] - Math.floor(data[i]) ) * 255;
-    		// imgData.data[i+2] = 255;
-    		// imgData.data[i+3] = 255;
-    	// }
+    	// var max = Math.max.apply(this, data);
+
+    	for(var i = 0; i < len; i += 4){    		
+    		for(var j = 0; j < 3; j++){
+    			imgData.data[i+j] = Math.round(data[i]) / max * 255;
+    		}
+    		imgData.data[i+3] = 255;
+    	}
 
     	ctx.clearRect(0, 0, W, H);
     	ctx.putImageData(imgData, 0, 0, 0, 0, W, H);
 
     	var img = new Image();
     	img.onload = function(){
-    		$('.photos').append(img);    		  		
+    		$('.photos').append(img);		  		
     	}
     	img.src = canvas.toDataURL("image/png");
+    }
+
+    $('.unwrapper').on('click', function(){
+    	unwrapping(tempImgList);
+    })
+    //解包裹
+    function unwrapping(I){
+    	if(!I.length) return;
+
+    	for(var i = 0; i < H; i++){
+	    	var grade = 0;
+	    	for(var j = 0; j < (W-1) * 4; j += 4 ){
+	    		var n = i * W * 4 + j;
+	    		var m = Math.abs( I[n] - I[n+4] );
+
+	    		if(m > 128){	    			
+	    			grade ++;
+	    		}
+
+	    		for(var k = 0; k < 3; k++){
+	    			tempImgList[n+k] = I[n+k] + 255 * grade;
+	    		}
+
+	    		tempImgList[n+3] = 255;
+	    	}
+    	}
+    	showImgData(ctxView, tempImgList);
     }
 
     $('.imgs').on('change', function(e){
