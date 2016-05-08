@@ -123,13 +123,13 @@ $(function(){
     	}, 300)
     }
 
+    var tempImgList = [];
     var frontImgList = [];
     var backImgList = [];
     var objImgList = [];
 
     // 抓取视频或显示区域的快照, 保存图片像素数据
     function getVideoPhoto(){
-    	var tempImgList = [];
 
     	var img = new Image();
     	img.onload = function(){
@@ -168,9 +168,18 @@ $(function(){
     function untiePhase(){
     	var I1, I2;
 
+
     	I1 = imgSubtract( frontImgList[3],  frontImgList[1] );
     	I2 = imgSubtract( frontImgList[0],  frontImgList[2] );
     	frontImgList = getPhase( I1, I2);
+
+    	I1 = imgSubtract( backImgList[3],  backImgList[1] );
+    	I2 = imgSubtract( backImgList[0],  backImgList[2] );
+    	backImgList = getPhase( I1, I2);
+
+    	// I1 = imgSubtract( objImgList[3],  objImgList[1] );
+    	// I2 = imgSubtract( objImgList[0],  objImgList[2] );
+    	// objImgList = getPhase( I1, I2);
 
     	// frontImgList = getPhase( 
     	// 	imgSubtract( frontImgList[3],  frontImgList[1] ), 
@@ -187,12 +196,14 @@ $(function(){
     	// 	imgSubtract( objImgList[0],  objImgList[2] ) 
     	// );
 
-    	showImgData(ctxView, tempImgList);
+    	showImgData(ctxView, frontImgList);
+    	showImgData(ctxView, backImgList);
+    	showImgData(ctxView, objImgList);
     }
 
     // 图片相减
     function imgSubtract(I1, I2){
-    	if(!I1.length && !I2.length) return;
+    	if(!I1 || !I1.length || !I2 || !I2.length) return;
 
     	var I = [];
     	for(var i = 0; i < H; i++){
@@ -209,7 +220,7 @@ $(function(){
 
     // Φ = arctan( I1=(I4 - I2) / I2=(I1 - I3) )
     function getPhase(I1, I2){
-    	if(!I1.length && !I2.length) return;
+    	if(!I1 || !I1.length || !I2 || !I2.length) return;
 
     	var I = [];
     	for(var i = 0; i < H; i++){
@@ -249,7 +260,7 @@ $(function(){
     }
 
     function showImgData(ctx, data){
-    	if(!data.length) return;
+    	if(!data || !data.length) return;
 
     	var imgData = ctx.createImageData(W, H);
     	// 直接赋值不行，并不知道原因，所以用循环,
@@ -281,7 +292,7 @@ $(function(){
     }
 
     $('.unwrapper').on('click', function(){
-    	unwrapping(tempImgList);
+    	unwrapping(frontImgList);
     })
     //解包裹
     function unwrapping(I){
