@@ -64,6 +64,9 @@
 .upload .imgs{
 	width:50%;
 }
+.photos{
+	width:100%;
+}
 .photos img{
 	width: 22%;
 	margin:0.5%;

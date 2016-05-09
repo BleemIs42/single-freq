@@ -133,10 +133,10 @@ $(function(){
 
     	var img = new Image();
     	img.onload = function(){
-    		$('.photos').append(img);    		  		
+    		$('.photos').prepend(img);    		  		
     	}
     	img.src = canvas.toDataURL("image/png");
-    	tempImgList.push( getImgPiexlData(img) );
+    	tempImgList.push( getImgPiexlData(img, W, H) );
 
     	var val = parseInt( $('#select').val() );
     	if(tempImgList.length == 4){
@@ -151,54 +151,34 @@ $(function(){
     	}
     }
 
-    function getImgPiexlData(img){
+    function getImgPiexlData(img, w, h){
     	var tempCanvas = $('<canvas/>')[0];
     	var tempCtx = tempCanvas.getContext('2d');
-    	tempCanvas.width = W;
-    	tempCanvas.height = H;
+    	tempCanvas.width = w;
+    	tempCanvas.height = h;
     	tempCtx.drawImage(img, 0, 0);
     	return tempCtx.getImageData(0, 0, W, H).data;
     }
 
     $('.untiephase').on('click', function(){
-    	untiePhase();
+    	frontImgList = untiePhase(frontImgList);
+    	backImgList = untiePhase(backImgList);
+    	objImgList = untiePhase(objImgList);
     })
 
     // 解相位
-    function untiePhase(){
+    function untiePhase(I){
+    	if(!I || !I.length) return;
+
     	var I1, I2;
 
+    	I1 = imgSubtract( I[3],  I[1] );
+    	I2 = imgSubtract( I[0],  I[2] );
+    	I = getPhase( I1, I2);
 
-    	I1 = imgSubtract( frontImgList[3],  frontImgList[1] );
-    	I2 = imgSubtract( frontImgList[0],  frontImgList[2] );
-    	frontImgList = getPhase( I1, I2);
+    	showImgData(ctxView, I);
 
-    	I1 = imgSubtract( backImgList[3],  backImgList[1] );
-    	I2 = imgSubtract( backImgList[0],  backImgList[2] );
-    	backImgList = getPhase( I1, I2);
-
-    	// I1 = imgSubtract( objImgList[3],  objImgList[1] );
-    	// I2 = imgSubtract( objImgList[0],  objImgList[2] );
-    	// objImgList = getPhase( I1, I2);
-
-    	// frontImgList = getPhase( 
-    	// 	imgSubtract( frontImgList[3],  frontImgList[1] ), 
-    	// 	imgSubtract( frontImgList[0],  frontImgList[2] ) 
-    	// );
-
-    	// backImgList = getPhase( 
-    	// 	imgSubtract( backImgList[3],  backImgList[1] ),  
-    	// 	imgSubtract( backImgList[0],  backImgList[2] ) 
-    	// );
-
-    	// objImgList = getPhase( 
-    	// 	imgSubtract( objImgList[3],  objImgList[1] ),  
-    	// 	imgSubtract( objImgList[0],  objImgList[2] ) 
-    	// );
-
-    	showImgData(ctxView, frontImgList);
-    	showImgData(ctxView, backImgList);
-    	showImgData(ctxView, objImgList);
+    	return I;
     }
 
     // 图片相减
@@ -266,17 +246,20 @@ $(function(){
     	// 直接赋值不行，并不知道原因，所以用循环,
     	// canvas像素自动向上取整了
     	var len = data.length;
-    	var max = 0;
+    	var max = 0, min = 0;
     	for(var l = 0; l < len; l++){
     		if(data[l] > max){
     			max = data[l];
+    		}
+    		if(data[l] < min){
+    			min = data[l];
     		}
     	}
     	// var max = Math.max.apply(this, data);
 
     	for(var i = 0; i < len; i += 4){    		
     		for(var j = 0; j < 3; j++){
-    			imgData.data[i+j] = Math.round(data[i]) / max * 255;
+    			imgData.data[i+j] = Math.round(data[i] - min) / (max - min) * 255;
     		}
     		imgData.data[i+3] = 255;
     	}
@@ -286,21 +269,40 @@ $(function(){
 
     	var img = new Image();
     	img.onload = function(){
-    		$('.photos').append(img);		  		
+    		$('.photos').prepend(img);		  		
     	}
     	img.src = canvas.toDataURL("image/png");
     }
 
     $('.unwrapper').on('click', function(){
-    	unwrapping(frontImgList);
+    	frontImgList = unwrapping(frontImgList);
+    	backImgList = unwrapping(backImgList);
+    	objImgList = unwrapping(objImgList);
+
+    	
+    	if( frontImgList && backImgList && objImgList ){
+    		var lenF = frontImgList.length;
+    		var lenB = backImgList.length;
+    		var lenO = objImgList.length;
+
+    		if( lenF == lenB && lenB == lenO ){
+    			for(var i = 0; i < lenF; i += 4){
+		    		for(var j = 0; j < 3; j++){
+		    			objImgList[i+j] = objImgList[i+j] - frontImgList[i+j];
+		    		}
+		    	}
+		    	showImgData(ctxView, objImgList);
+    		}
+    	}
     })
+
     //解包裹
     function unwrapping(I){
-    	if(!I.length) return;
+    	if(!I || !I.length) return;
 
     	for(var i = 0; i < H; i++){
 	    	var grade = 0;
-	    	for(var j = 0; j < (W-1) * 4; j += 4 ){
+	    	for(var j = 0; j < W * 4; j += 4 ){
 	    		var n = i * W * 4 + j;
 	    		var m = Math.abs( I[n] - I[n+4] );
 
@@ -316,6 +318,8 @@ $(function(){
 	    	}
     	}
     	showImgData(ctxView, tempImgList);
+
+    	return tempImgList;
     }
 
     $('.imgs').on('change', function(e){
@@ -329,12 +333,38 @@ $(function(){
     		(function(j){
     			var fileReader = new FileReader();
 				fileReader.readAsDataURL(self.files[j]);
+				fileReader.name = parseInt( self.files[j].name );
 				fileReader.onload = function(e){
-					img = new Image();
-					img.src = e.target.result;
+					var img = new Image();
 					img.onload = function(){
-						console.log(img)
+						$('.photos').prepend(img);
+
+						W = img.naturalWidth;
+						H = img.naturalHeight;
+						canvas.width = W;
+    					canvas.height = H;
+
+						var obj = {};
+						obj.name = fileReader.name;
+						obj.data = getImgPiexlData(img, img.naturalWidth, img.naturalHeight);
+						tempImgList.push(obj);
+
+						if(tempImgList.length == len){
+							console.log(tempImgList)
+							for(var k = 0; k < len; k++){
+								var n = tempImgList[k].name;
+								if(n <= 4){
+									frontImgList.push( tempImgList[k].data );
+								}else if(n <= 8){
+									backImgList.push( tempImgList[k].data );
+								}else{									
+									objImgList.push( tempImgList[k].data );
+								}
+							}
+						}
+
 					}
+					img.src = e.target.result;
 				}
     		})(i)
     	}
