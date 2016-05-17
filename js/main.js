@@ -36,7 +36,54 @@ $(function(){
         alert('getUserMedia Not Support!');
     }
 
-    // drawVideo(ctxView);
+    // 上传图片
+    $('.imgs').on('change', function(e){
+        var self = $(this)[0];
+        var len = self.files.length;
+
+        // if(len !== 4) return;
+        if(len === 0) return;
+
+        for(var i = 0; i < len; i++){
+            (function(j){
+                var fileReader = new FileReader();
+                fileReader.readAsDataURL(self.files[j]);
+                fileReader.name = parseInt( self.files[j].name );
+                fileReader.onload = function(e){
+                    var img = new Image();
+                    img.onload = function(){
+                        $('.photos').prepend(img);
+
+                        W = this.naturalWidth;
+                        H = this.naturalHeight;
+                        canvas.width = W;
+                        canvas.height = H;
+
+                        var obj = {};
+                        obj.name = fileReader.name;
+                        obj.data = getImgPiexlData(this, this.naturalWidth, this.naturalHeight);
+                        tempImgList.push(obj);
+
+                        if(tempImgList.length == len){
+                            console.log(tempImgList)
+                            for(var k = 0; k < len; k++){
+                                var n = tempImgList[k].name;
+                                if(n <= 4){
+                                    frontImgList.push( tempImgList[k].data );
+                                }else if(n <= 8){
+                                    backImgList.push( tempImgList[k].data );
+                                }else{                                  
+                                    objImgList.push( tempImgList[k].data );
+                                }
+                            }
+                        }
+
+                    }
+                    img.src = e.target.result;
+                }
+            })(i)
+        }
+    });
 
     var timer;
     function drawVideo(ctx){
@@ -157,7 +204,20 @@ $(function(){
     	tempCanvas.width = w;
     	tempCanvas.height = h;
     	tempCtx.drawImage(img, 0, 0);
-    	return tempCtx.getImageData(0, 0, W, H).data;
+        var data = tempCtx.getImageData(0, 0, W, H).data
+        rgb2grey(data);
+        
+    	return data;
+    }
+
+    function rgb2grey(I){
+        var len = I.length;
+        for(var i = 0; i< len; i += 4){
+            var avar = ( I[i] + I[i+1] + I[i+2] ) / 3;
+            I[i] = I[i+1] = I[i+2] = avar;
+        }
+
+        return I;
     }
 
     $('.untiephase').on('click', function(){
@@ -196,6 +256,14 @@ $(function(){
 	    	}
     	}
     	return I;
+    }
+
+    function rgb2grey(I){
+        var len = I.length;
+        for(var i = 0; i< len; i += 4){
+            var avar = ( I[i] + I[i+1] + I[i+2] ) / 3;
+            I[i] = I[i+1] = I[i+2] = avar;
+        }
     }
 
     // Φ = arctan( I1=(I4 - I2) / I2=(I1 - I3) )
@@ -247,7 +315,7 @@ $(function(){
     	// canvas像素自动向上取整了
     	var len = data.length;
     	var max = 0, min = 0;
-    	for(var l = 0; l < len; l++){
+    	for(var l = 0; l < len; l += 4){
     		if(data[l] > max){
     			max = data[l];
     		}
@@ -275,10 +343,9 @@ $(function(){
     }
 
     $('.unwrapper').on('click', function(){
-    	frontImgList = unwrapping(frontImgList);
-    	backImgList = unwrapping(backImgList);
-    	objImgList = unwrapping(objImgList);
-
+        frontImgList = unwrappingRotate(frontImgList);
+        backImgList = unwrappingRotate(backImgList);
+        objImgList = unwrappingRotate(objImgList);
     	
     	if( frontImgList && backImgList && objImgList ){
     		var lenF = frontImgList.length;
@@ -322,54 +389,141 @@ $(function(){
     	return tempImgList;
     }
 
-    $('.imgs').on('change', function(e){
-    	var self = $(this)[0];
-    	var len = self.files.length;
+    function unwrappingRotate(I){
+        if(!I || !I.length) return;
 
-    	// if(len !== 4) return;
-    	if(len === 0) return;
+        var len = I.length;
+        var max = 0, min = 0;
+        for(var l = 0; l < len; l += 4){
+            if(I[l] > max){
+                max = I[l];
+            }
+            if(I[l] < min){
+                min = I[l];
+            }
+        }
 
-    	for(var i = 0; i < len; i++){
-    		(function(j){
-    			var fileReader = new FileReader();
-				fileReader.readAsDataURL(self.files[j]);
-				fileReader.name = parseInt( self.files[j].name );
-				fileReader.onload = function(e){
-					var img = new Image();
-					img.onload = function(){
-						$('.photos').prepend(img);
+        for(var i = 0; i < len; i += 4){            
+            for(var j = 0; j < 3; j++){
+                I[i+j] = Math.round(I[i] - min) / (max - min) * 2 * PI;
+            }
+            I[i+3] = 2*PI;
+        }
 
-						W = this.naturalWidth;
-						H = this.naturalHeight;
-						canvas.width = W;
-    					canvas.height = H;
+        var PD = [];
+        for(var p = 0; p < H; p++){
+            var tempArr = [];
+            for(var q = 0; q < W; q++){
+                tempArr.push( I[p*W*4+4*q] );
+            }
+            PD.push(tempArr);
+        }
 
-						var obj = {};
-						obj.name = fileReader.name;
-						obj.data = getImgPiexlData(this, this.naturalWidth, this.naturalHeight);
-						tempImgList.push(obj);
+        // 对应Matlab:  M = H; N = W;
+        var PT = [];
+        for(var j = 0; j < H; j++){
+            var tmpArr = [];
+            for(var k = 0; k < W; k++){
+                tempArr[k] = 0;
+            }
+            PT.push(tempArr);
+        }
 
-						if(tempImgList.length == len){
-							console.log(tempImgList)
-							for(var k = 0; k < len; k++){
-								var n = tempImgList[k].name;
-								if(n <= 4){
-									frontImgList.push( tempImgList[k].data );
-								}else if(n <= 8){
-									backImgList.push( tempImgList[k].data );
-								}else{									
-									objImgList.push( tempImgList[k].data );
-								}
-							}
-						}
+        var PL = [];
+        var l = W * H;
+        for(var n = 0; n < 2; n++){
+            var tmpArr = [];
+            for(var m = 0; m < l; m++){
+                tempArr[m] = 0;
+            }
+            PL.push(tempArr);
+        }
 
-					}
-					img.src = e.target.result;
-				}
-    		})(i)
-    	}
-    });
+        var length = 1;
+        PL[0][0] = Math.round(H/2);
+        PL[1][0] = Math.round(W/2);
+        PT[ PL[0][0] ][ PL[1][0] ] = 1;
 
+        function rotate(){
+            var abs = Math.abs;
+            while( abs( PD[ PL[0][length] ][ PL[1][length] ] - PD[ PL[0][0] ][ PL[1][0] ] ) > PI ){
+                    if( -PI > PD[ PL[0][length] ][ PL[1][length] ] - PD[ PL[0][0] ][ PL[1][0] ] ){
+                        PD[ PL[0][length] ][ PL[1][length] ] = PD[ PL[0][length] ][ PL[1][length] ] + 2*PI;
+                    }else 
+                    if( PD[ PL[0][length] ][ PL[1][length] ] - PD[ PL[0][0] ][ PL[1][0] ] > PI ){
+                        PD[ PL[0][length] ][ PL[1][length] ] = PD[ PL[0][length] ][ PL[1][length] ] - 2*PI;
+                    }else{                        
+                        PD[ PL[0][length] ][ PL[1][length] ] = PD[ PL[0][length] ][ PL[1][length] ];
+                    }
+            }
+        }
+        while(length){
+            if( PL[0][0] > 1 && ( PT[ PL[0][0] - 1 ][ PL[1][0] ] ) == 0 ){
+                length++;
+                PL[0][length] = PL[0][0] - 1;
+                PL[1][length] = PL[1][0];
+                PT[ PL[0][length] ][ PL[1][length] ] = 1;
+
+                rotate();
+            }
+            if( PL[1][0] > 1 && ( PT[ PL[0][0] ][ PL[1][0] - 1 ] ) == 0 ){
+                length++;
+                PL[0][length] = PL[0][0];
+                PL[1][length] = PL[1][0] - 1;
+                PT[ PL[0][length] ][ PL[1][length] ] = 1;
+
+                rotate();
+            }
+            if( PL[0][0] < H && ( PT[ PL[0][0] + 1 ][ PL[1][0] ] ) == 0 ){
+                length++;
+                PL[0][length] = PL[0][0] + 1;
+                PL[1][length] = PL[1][0];
+                PT[ PL[0][length] ][ PL[1][length] ] = 1;
+
+                rotate();
+            }            
+            if( PL[0][0] < W && ( PT[ PL[0][0] ][ PL[1][0] + 1 ] ) == 0 ){
+                length++;
+                PL[0][length] = PL[0][0];
+                PL[1][length] = PL[1][0] + 1;
+                PT[ PL[0][length] ][ PL[1][length] ] = 1;
+
+                rotate();
+            }
+
+            var tempPL = [];
+            if( length > 1){
+                for(var g = 0; g < 2; g++){
+                    var tempArr = [];
+                    for(var f = 1; f < length; f++){
+                        tempArr.push( PL[g][f] );
+                    }
+                    tempPL.push( tempArr );
+                }
+                PL = tempPL;
+            }
+            length--;
+        }
+
+        var newI = [];
+        for(var e = 0; e < H; e++){
+            for(var d = 0; d < W; d++){
+                if(PD[e][d] > 2*PI){
+                   PD[e][d] = 2*PI;
+                }
+                // PD[e][d] = PD[e][d] / 2 / PI * 255;
+
+                newI.push( PD[e][d] );
+                newI.push( PD[e][d] );
+                newI.push( PD[e][d] );
+                newI.push( 2*PI );
+                // newI.push( 255 );
+            }
+        }
+
+        showImgData(ctxView, newI);
+        return newI;
+    }
     
 
 })
