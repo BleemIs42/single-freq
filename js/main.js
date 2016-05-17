@@ -339,14 +339,14 @@ $(function(){
 					img.onload = function(){
 						$('.photos').prepend(img);
 
-						W = img.naturalWidth;
-						H = img.naturalHeight;
+						W = this.naturalWidth;
+						H = this.naturalHeight;
 						canvas.width = W;
     					canvas.height = H;
 
 						var obj = {};
 						obj.name = fileReader.name;
-						obj.data = getImgPiexlData(img, img.naturalWidth, img.naturalHeight);
+						obj.data = getImgPiexlData(this, this.naturalWidth, this.naturalHeight);
 						tempImgList.push(obj);
 
 						if(tempImgList.length == len){
