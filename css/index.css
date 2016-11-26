@@ -66,6 +66,7 @@
 }
 .photos{
 	width:100%;
+	clear:both;
 }
 .photos img{
 	width: 22%;

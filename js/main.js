@@ -343,6 +343,11 @@ $(function(){
     }
 
     $('.unwrapper').on('click', function(){
+
+        // frontImgList = unwrapping(frontImgList);
+        // backImgList = unwrapping(backImgList);
+        // objImgList = unwrapping(objImgList);
+
         frontImgList = unwrappingRotate(frontImgList);
         backImgList = unwrappingRotate(backImgList);
         objImgList = unwrappingRotate(objImgList);
@@ -525,5 +530,4 @@ $(function(){
         return newI;
     }
     
-
 })
